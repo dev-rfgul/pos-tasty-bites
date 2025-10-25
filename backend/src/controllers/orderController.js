@@ -19,6 +19,15 @@ export async function createOrder(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// List recent orders for tenant (debug / admin)
+export async function listOrders(req, res, next) {
+  try {
+    const tenantId = req.tenantId;
+    const orders = await Order.find({ tenant: tenantId }).sort({ createdAt: -1 }).limit(50).lean();
+    res.json(orders);
+  } catch (err) { next(err); }
+}
+
 // Add item to order
 export async function addOrderItem(req, res, next) {
   try {
@@ -30,10 +39,9 @@ export async function addOrderItem(req, res, next) {
 
     const menuItem = await MenuItem.findOne({ _id: menuItemId, tenant: tenantId });
     if (!menuItem) return res.status(404).json({ error: 'Menu item not found' });
-
-    order.orderItems.push({ menuItem: menuItem._id, name: menuItem.name, qty, unitPrice: menuItem.price, cost: menuItem.cost });
-    // Recalculate total (simple sum)
-    order.total = order.orderItems.reduce((s, it) => s + (it.unitPrice * it.qty), 0);
+    const quantity = Math.max(1, parseInt(qty, 10) || 1);
+    order.orderItems.push({ menuItem: menuItem._id, name: menuItem.name, qty: quantity, unitPrice: menuItem.price, cost: menuItem.cost });
+    // Save will trigger pre-save hook to recalc total
     await order.save();
     res.json(order);
   } catch (err) { next(err); }
@@ -48,8 +56,16 @@ export async function checkoutOrder(req, res, next) {
     const order = await Order.findOne({ _id: id, tenant: tenantId });
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
+    // Ensure order total is up-to-date (recalculate from items)
+    order.total = order.orderItems.reduce((s, it) => s + (Number(it.unitPrice || 0) * Number(it.qty || 0)), 0);
+
+    if (typeof amount !== 'number' || amount < order.total) {
+      return res.status(400).json({ error: 'Payment amount is less than order total' });
+    }
+
     const payment = await Payment.create({ order: order._id, amount, method });
     order.status = 'paid';
+    order.paidAt = new Date();
     await order.save();
 
     if (order.type === 'dine' && order.table) {
@@ -60,4 +76,4 @@ export async function checkoutOrder(req, res, next) {
   } catch (err) { next(err); }
 }
 
-export default { createOrder, addOrderItem, checkoutOrder };
+export default { createOrder, addOrderItem, checkoutOrder, listOrders };
