@@ -6,6 +6,7 @@ import authRouter from './src/routes/auth.js';
 import menuRouter from './src/routes/menu.js';
 import tablesRouter from './src/routes/tables.js';
 import ordersRouter from './src/routes/orders.js';
+import reportsRouter from './src/routes/reports.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/tables', tablesRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/reports', reportsRouter);
 
 // Error handler
 app.use((err, req, res, next) => {
