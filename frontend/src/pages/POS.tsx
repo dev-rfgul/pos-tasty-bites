@@ -18,18 +18,31 @@ export default function POS() {
     }
   }
 
-  async function saveOrder() {
-    // create order and add items
+  async function printOrder() {
+    // create order, add items and request receipt PDF
     try {
       const res = await API.post('/api/orders', { type: 'parcel' });
       const orderId = res.data._id;
       for (const it of cart) {
         await API.post(`/api/orders/${orderId}/items`, { menuItemId: it.menuItem, qty: it.qty });
       }
-      alert('Order saved');
+
+      // request receipt PDF
+      const pdfRes = await API.get(`/api/orders/${orderId}/receipt`, { responseType: 'blob' });
+      const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
       setCart([]);
     } catch (e) {
-      alert('Failed to save order');
+      console.error(e);
+      alert('Failed to create/print order');
     }
   }
 
@@ -57,7 +70,7 @@ export default function POS() {
             </div>
           ))}
           <div className="mt-4">
-            <button className="bg-green-600 text-white px-3 py-2 rounded" onClick={saveOrder}>Save Order</button>
+            <button className="bg-green-600 text-white px-3 py-2 rounded" onClick={printOrder}>Print Receipt</button>
           </div>
         </div>
       </div>

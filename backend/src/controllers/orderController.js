@@ -2,6 +2,8 @@ import Order from '../models/Order.js';
 import MenuItem from '../models/MenuItem.js';
 import Table from '../models/Table.js';
 import Payment from '../models/Payment.js';
+import Tenant from '../models/Tenant.js';
+import PDFDocument from 'pdfkit';
 
 // Create/open an order
 export async function createOrder(req, res, next) {
@@ -74,6 +76,56 @@ export async function checkoutOrder(req, res, next) {
 
     res.json({ order, payment });
   } catch (err) { next(err); }
+}
+
+// Generate a simple PDF receipt for an order and stream it back
+export async function generateReceipt(req, res, next) {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+    const order = await Order.findOne({ _id: id, tenant: tenantId }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const tenant = await Tenant.findById(order.tenant).lean();
+
+    // Create PDF
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=receipt-${order._id}.pdf`);
+
+    doc.pipe(res);
+
+    doc.fontSize(18).text(tenant?.name || 'Tasty Bites', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Order ID: ${order._id}`);
+    doc.text(`Type: ${order.type}`);
+    doc.text(`Status: ${order.status}`);
+    doc.text(`Created: ${new Date(order.createdAt).toLocaleString()}`);
+    if (order.paidAt) doc.text(`Paid: ${new Date(order.paidAt).toLocaleString()}`);
+    doc.moveDown();
+
+    doc.text('Items:');
+    doc.moveDown(0.5);
+    const tableTop = doc.y;
+    order.orderItems.forEach((it) => {
+      const line = `${it.name}  x${it.qty}  @ ${Number(it.unitPrice).toFixed(2)}  = ${(Number(it.unitPrice) * Number(it.qty)).toFixed(2)}`;
+      doc.text(line);
+    });
+
+    doc.moveDown();
+    doc.text(`Subtotal: ${Number(order.total || 0).toFixed(2)}`);
+    if (order.tax) doc.text(`Tax: ${Number(order.tax || 0).toFixed(2)}`);
+    if (order.discount) doc.text(`Discount: ${Number(order.discount || 0).toFixed(2)}`);
+    doc.text(`Total: ${Number(order.total || 0).toFixed(2)}`, { align: 'right' });
+
+    doc.moveDown(2);
+    doc.fontSize(10).text('Thank you for your order!', { align: 'center' });
+
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
 }
 
 export default { createOrder, addOrderItem, checkoutOrder, listOrders };
