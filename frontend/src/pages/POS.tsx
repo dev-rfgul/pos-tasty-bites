@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api/api';
+import Invoice from '../components/Invoice';
 
 export default function POS() {
   const [menu, setMenu] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [loadingPrint, setLoadingPrint] = useState(false);
+  const [orderInfo, setOrderInfo] = useState<any>(null);
 
   useEffect(() => {
     API.get('/api/menu').then((r) => setMenu(r.data)).catch(() => setMenu([]));
@@ -18,31 +22,48 @@ export default function POS() {
     }
   }
 
-  async function printOrder() {
-    // create order, add items and request receipt PDF
+  async function handleShowInvoice() {
+    if (!cart.length) return alert('Cart is empty');
+    setLoadingPrint(true);
+
     try {
+      // create order on server so it's persisted for reports
       const res = await API.post('/api/orders', { type: 'parcel' });
       const orderId = res.data._id;
       for (const it of cart) {
         await API.post(`/api/orders/${orderId}/items`, { menuItemId: it.menuItem, qty: it.qty });
       }
 
-      // request receipt PDF
-      const pdfRes = await API.get(`/api/orders/${orderId}/receipt`, { responseType: 'blob' });
-      const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt-${orderId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      // build orderInfo for the modal (client-side representation)
+      const subtotal = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
+      const tax = 0; // adjust if you have tax settings
+      const totalWithTax = subtotal + tax;
 
-      setCart([]);
+      const info = {
+        orderDate: new Date().toISOString(),
+        customerDetails: { name: 'Walk-in', phone: '', guests: 1 },
+        items: cart.map((c) => ({ name: c.name, quantity: c.qty, price: c.unitPrice })),
+        bills: { total: subtotal, tax, totalWithTax },
+        paymentMethod: 'Cash',
+        paymentData: undefined,
+      };
+
+      setOrderInfo(info);
+      setShowInvoice(true);
     } catch (e) {
       console.error(e);
-      alert('Failed to create/print order');
+      alert('Failed to create order for printing');
+    } finally {
+      setLoadingPrint(false);
+    }
+  }
+
+  // when modal is closed, clear cart
+  function handleSetShowInvoice(v: boolean) {
+    setShowInvoice(v);
+    if (!v) {
+      setCart([]);
+      setOrderInfo(null);
     }
   }
 
@@ -70,10 +91,14 @@ export default function POS() {
             </div>
           ))}
           <div className="mt-4">
-            <button className="bg-green-600 text-white px-3 py-2 rounded" onClick={printOrder}>Print Receipt</button>
+            <button className="bg-green-600 text-white px-3 py-2 rounded" onClick={handleShowInvoice} disabled={loadingPrint}>{loadingPrint ? 'Preparing...' : 'Print Receipt'}</button>
           </div>
         </div>
       </div>
+
+      {showInvoice && orderInfo && (
+        <Invoice orderInfo={orderInfo} setShowInvoice={handleSetShowInvoice} />
+      )}
     </div>
   );
 }
