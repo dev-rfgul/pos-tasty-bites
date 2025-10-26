@@ -69,9 +69,17 @@ const Invoice = ({ orderInfo, setShowInvoice }: { orderInfo: OrderInfo; setShowI
                   .pb-2 { padding-bottom: 0.5rem; }
                   
                   /* Logo */
+                  .w-16 { width: 4rem; max-width: 4rem; }
                   .w-20 { width: 5rem; }
                   .h-auto { height: auto; }
                   .mx-auto { margin-left: auto; margin-right: auto; }
+                  
+                  /* Ensure images don't overflow */
+                  img { 
+                    display: block; 
+                    max-width: 100%;
+                    height: auto;
+                  }
                   
                   /* Typography */
                   .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
@@ -97,9 +105,6 @@ const Invoice = ({ orderInfo, setShowInvoice }: { orderInfo: OrderInfo; setShowI
                   /* Flexbox */
                   .flex { display: flex; }
                   .justify-between { justify-content: space-between; }
-                  
-                  /* Display */
-                  img { display: block; }
                   
                   @media print {
                     @page {
@@ -147,31 +152,31 @@ const Invoice = ({ orderInfo, setShowInvoice }: { orderInfo: OrderInfo; setShowI
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-96 max-h-[90vh] overflow-auto">
+      <div className="bg-white rounded-lg shadow-lg max-h-[90vh] overflow-auto" style={{ width: '320px' }}>
         
-        <div ref={invoiceRef} className="p-6" style={{ fontFamily: 'Courier New, monospace' }}>
+        <div ref={invoiceRef} className="p-4" style={{ fontFamily: 'Courier New, monospace', width: '100%' }}>
           
           {/* Header Section */}
-          <div className="text-center border-b-2 border-dashed border-gray-800 pb-4 mb-4">
+          <div className="text-center border-b-2 border-dashed border-gray-800 pb-3 mb-3">
             <img
               src={logo}
               alt="Logo"
-              className="w-20 h-auto mx-auto mb-3"
+              className="w-16 h-auto mx-auto mb-2"
             />
-            <h1 className="text-xl font-bold uppercase mb-2">Tasty Bites Cafe</h1>
-            <p className="text-xs font-bold mb-1">ORDER RECEIPT</p>
-            <p className="text-xs text-gray-600">Thank you for your order!</p>
+            <h1 className="text-lg font-bold uppercase mb-1">Tasty Bites Cafe</h1>
+            <p className="text-[10px] font-bold mb-1">ORDER RECEIPT</p>
+            <p className="text-[10px] text-gray-600">Thank you for your order!</p>
           </div>
 
           {/* Order & Customer Info */}
-          <div className="mb-4 text-sm">
+          <div className="mb-3 text-[11px]">
             <div className="flex justify-between mb-1">
               <span className="font-bold">Order ID:</span>
-              <span>{Math.floor(new Date(orderInfo.orderDate).getTime())}</span>
+              <span className="text-[10px]">{Math.floor(new Date(orderInfo.orderDate).getTime())}</span>
             </div>
             <div className="flex justify-between mb-1">
               <span className="font-bold">Date:</span>
-              <span>{new Date(orderInfo.orderDate).toLocaleString()}</span>
+              <span className="text-[10px]">{new Date(orderInfo.orderDate).toLocaleString()}</span>
             </div>
             <div className="flex justify-between mb-1">
               <span className="font-bold">Customer:</span>
@@ -188,11 +193,11 @@ const Invoice = ({ orderInfo, setShowInvoice }: { orderInfo: OrderInfo; setShowI
           </div>
 
           {/* Items Section */}
-          <div className="border-t-2 border-gray-800 pt-3 mb-3">
-            <h3 className="font-bold text-sm uppercase mb-2 border-b border-gray-800 pb-1">Items Ordered</h3>
-            <div className="text-xs">
+          <div className="border-t-2 border-gray-800 pt-2 mb-2">
+            <h3 className="font-bold text-[11px] uppercase mb-2 border-b border-gray-800 pb-1">Items Ordered</h3>
+            <div className="text-[10px]">
               {orderInfo.items.map((item, index) => (
-                <div key={index} className="mb-3 pb-2 border-b border-dashed border-gray-300">
+                <div key={index} className="mb-2 pb-2 border-b border-dashed border-gray-300">
                   <div className="font-semibold mb-1">{item.name}</div>
                   <div className="flex justify-between text-gray-700">
                     <span>{item.quantity} x ₨{item.price.toFixed(2)}</span>
@@ -204,34 +209,34 @@ const Invoice = ({ orderInfo, setShowInvoice }: { orderInfo: OrderInfo; setShowI
           </div>
 
           {/* Billing Section */}
-          <div className="border-t-2 border-gray-800 pt-3 mb-3 text-sm">
-            <div className="flex justify-between mb-2">
+          <div className="border-t-2 border-gray-800 pt-2 mb-2 text-[11px]">
+            <div className="flex justify-between mb-1">
               <span>Subtotal:</span>
               <span>₨{orderInfo.bills.total.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between mb-3">
+            <div className="flex justify-between mb-2">
               <span>Tax:</span>
               <span>₨{orderInfo.bills.tax.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between font-bold text-lg border-t-2 border-b-2 border-gray-800 py-2">
+            <div className="flex justify-between font-bold text-sm border-t-2 border-b-2 border-gray-800 py-1">
               <span>GRAND TOTAL:</span>
               <span>₨{orderInfo.bills.totalWithTax.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Payment Details */}
-          <div className="border-t border-dashed border-gray-800 pt-3 mb-4 text-xs">
+          <div className="border-t border-dashed border-gray-800 pt-2 mb-3 text-[10px]">
             <div className="flex justify-between mb-1">
               <span className="font-bold">Payment Method:</span>
               <span>{orderInfo.paymentMethod}</span>
             </div>
             {orderInfo.paymentMethod !== "Cash" && orderInfo.paymentData && (
               <>
-                <div className="flex justify-between mb-1 text-[10px]">
+                <div className="flex justify-between mb-1 text-[9px]">
                   <span>Order ID:</span>
                   <span>{orderInfo.paymentData.razorpay_order_id}</span>
                 </div>
-                <div className="flex justify-between text-[10px]">
+                <div className="flex justify-between text-[9px]">
                   <span>Payment ID:</span>
                   <span>{orderInfo.paymentData.razorpay_payment_id}</span>
                 </div>
@@ -240,13 +245,13 @@ const Invoice = ({ orderInfo, setShowInvoice }: { orderInfo: OrderInfo; setShowI
           </div>
 
           {/* Footer Section */}
-          <div className="border-t-2 border-dashed border-gray-800 pt-4 text-center">
-            <p className="text-xs mb-3">Thank you for dining with us!</p>
-            <p className="text-xs mb-1">Visit us again soon</p>
+          <div className="border-t-2 border-dashed border-gray-800 pt-3 text-center">
+            <p className="text-[10px] mb-2">Thank you for dining with us!</p>
+            <p className="text-[10px] mb-1">Visit us again soon</p>
             
             {/* Developer Info */}
-            <div className="mt-4 pt-3 border-t border-gray-400 text-[10px] text-gray-600">
-              <p className="font-bold text-xs mb-1">System Developed By</p>
+            <div className="mt-3 pt-2 border-t border-gray-400 text-[9px] text-gray-600">
+              <p className="font-bold text-[10px] mb-1">System Developed By</p>
               <p className="font-semibold">{DEVELOPER_NAME}</p>
               <p className="mt-1">
                 <a href={WEBSITE_URL} className="underline">{WEBSITE_URL}</a>
